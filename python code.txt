@@ -1,0 +1,69 @@
+import requests
+from docx import Document
+
+# Set your GitHub personal access token
+ACCESS_TOKEN = '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'  # Replace with your actual personal access token
+REPO_OWNER = 'Nolybi'
+REPO_NAME = 'documentation-repo'
+
+def search_github(query, repo_owner=REPO_OWNER, repo_name=REPO_NAME):
+    api_url = f'https://api.github.com/repos/{repo_owner}/{repo_name}/contents/'
+    headers = {'Authorization': f'token {ACCESS_TOKEN}'}
+
+    try:
+        response = requests.get(api_url, headers=headers)
+
+        # Check if the request was successful (status code 200)
+        response.raise_for_status()
+
+        # Parse the JSON response
+        files = response.json()
+
+        # Perform a case-insensitive search for the query
+        matching_files = [file['name'] for file in files if query.lower() in file['name'].lower()]
+
+        return matching_files
+
+    except requests.exceptions.HTTPError as errh:
+        print(f"HTTP Error: {errh}")
+    except requests.exceptions.ConnectionError as errc:
+        print(f"Error Connecting: {errc}")
+    except requests.exceptions.Timeout as errt:
+        print(f"Timeout Error: {errt}")
+    except requests.exceptions.RequestException as err:
+        print(f"An unexpected error occurred: {err}")
+
+    return []
+
+def copy_contents_to_word(files, repo_owner=REPO_OWNER, repo_name=REPO_NAME):
+    document = Document()
+
+    for file_name in files:
+        api_url = f'https://raw.githubusercontent.com/{repo_owner}/{repo_name}/main/{file_name}'
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            content = response.text
+            document.add_heading(file_name, level=1)
+            document.add_paragraph(content)
+        else:
+            print(f"Failed to retrieve content for file: {file_name}")
+
+    document.save('output.docx')
+
+def main():
+    user_input = input("Enter a process you'd like to know about: ")
+    matching_files = search_github(user_input)
+
+    if matching_files:
+        print("\nMatching Files:")
+        for i, file in enumerate(matching_files, start=1):
+            print(f"{i}. {file}")
+
+        copy_contents_to_word(matching_files)
+        print("Content copied to 'output.docx'.")
+    else:
+        print("No documentation found for the given query.")
+
+if __name__ == "__main__":
+    main()

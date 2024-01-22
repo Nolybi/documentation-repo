@@ -1,0 +1,1 @@
+(This is the content for configuring a frozen node)
